@@ -1,4 +1,7 @@
 # Show title and description.
+import streamlit as st
+from openai import OpenAI
+
 st.title("💬 Chatbot")
 st.write(
     "This is a simple chatbot that uses OpenAI's GPT-4o-mini model to generate responses. "
