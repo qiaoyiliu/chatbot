@@ -43,19 +43,16 @@ else:
             text = text[:2000]
 
             # Add a system message that summarizes the URL.
-            summary_response = client.chat_completions.create(
+            url_summary = client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[{"role": "system", "content": f"Summarize the following text: {text}"}],
                 stream=False
             )
 
-            # Access the assistant's response message.
-            summary_content = summary_response['choices'][0]['message']['content']
-
             # Store and display the summary in the chat.
-            st.session_state.messages.append({"role": "system", "content": summary_content})
+            st.session_state.messages.append({"role": "system", "content": url_summary['choices'][0]['message']['content']})
             st.write("Summary of the URL content:")
-            st.markdown(summary_content)
+            st.markdown(url_summary['choices'][0]['message']['content'])
 
         except Exception as e:
             st.error(f"Failed to retrieve or process the URL. Error: {e}")
@@ -90,7 +87,7 @@ else:
                 st.session_state.messages = st.session_state.messages[-100:]
 
         # Generate a response using the OpenAI API.
-        stream = client.chat_completions.create(
+        stream = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[{"role": m["role"], "content": m["content"]} for m in st.session_state.messages],
             stream=True,
