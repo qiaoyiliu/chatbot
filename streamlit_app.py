@@ -15,15 +15,12 @@ def fetch_url_content(url):
 # Function to summarize the URL content using the new OpenAI API (v1.0.0 and above)
 def summarize_content(content, api_key):
     openai.api_key = api_key
-    response = openai.chat_completions.create(
+    response = openai.completions.create(
         model="gpt-4",  # Use the appropriate model
-        messages=[
-            {"role": "system", "content": "You are a helpful assistant."},
-            {"role": "user", "content": f"Summarize the following content: {content}"}
-        ],
+        prompt=f"Summarize the following content: {content}",
         max_tokens=150,
     )
-    return response.choices[0].message['content'].strip()
+    return response.choices[0].text.strip()
 
 # Function to chat with memory (summary + chat history) using the new OpenAI API (v1.0.0 and above)
 def chat_with_memory(user_input, api_key):
@@ -32,15 +29,12 @@ def chat_with_memory(user_input, api_key):
              "\nUser: " + user_input
              
     openai.api_key = api_key
-    response = openai.chat_completions.create(
+    response = openai.completions.create(
         model="gpt-4",  # Use the appropriate model
-        messages=[
-            {"role": "system", "content": "You are a helpful assistant."},
-            {"role": "user", "content": prompt}
-        ],
+        prompt=prompt,
         max_tokens=200,
     )
-    return response.choices[0].message['content'].strip()
+    return response.choices[0].text.strip()
 
 # Streamlit chatbot app
 st.title("💬 Chatbot with URL Summarization")
