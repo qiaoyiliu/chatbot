@@ -12,26 +12,35 @@ def fetch_url_content(url):
     except Exception as e:
         return f"Error fetching content from URL: {e}"
 
-# Function to summarize the URL content
+# Function to summarize the URL content using the new OpenAI API
 def summarize_content(content, api_key):
     openai.api_key = api_key
-    response = openai.Completion.create(
-        engine="gpt-4",
-        prompt=f"Summarize the following content: {content}",
+    response = openai.ChatCompletion.create(
+        model="gpt-4",  # Use the appropriate model
+        messages=[
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "user", "content": f"Summarize the following content: {content}"}
+        ],
         max_tokens=150,
     )
-    return response.choices[0].text.strip()
+    return response.choices[0].message['content'].strip()
 
-# Function to chat with memory (summary + chat history)
+# Function to chat with memory (summary + chat history) using the new OpenAI API
 def chat_with_memory(user_input, api_key):
-    prompt = "\n".join([msg['content'] for msg in st.session_state['messages']]) + "\nSummary: " + "\n".join(st.session_state['url_summaries']) + "\nUser: " + user_input
+    prompt = "\n".join([msg['content'] for msg in st.session_state['messages']]) + \
+             "\nSummary: " + "\n".join(st.session_state['url_summaries']) + \
+             "\nUser: " + user_input
+             
     openai.api_key = api_key
-    response = openai.Completion.create(
-        engine="gpt-4",
-        prompt=prompt,
+    response = openai.ChatCompletion.create(
+        model="gpt-4",  # Use the appropriate model
+        messages=[
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "user", "content": prompt}
+        ],
         max_tokens=200,
     )
-    return response.choices[0].text.strip()
+    return response.choices[0].message['content'].strip()
 
 # Streamlit chatbot app
 st.title("💬 Chatbot with URL Summarization")
