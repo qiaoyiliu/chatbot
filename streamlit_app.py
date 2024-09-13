@@ -12,10 +12,10 @@ def fetch_url_content(url):
     except Exception as e:
         return f"Error fetching content from URL: {e}"
 
-# Function to summarize the URL content using the new OpenAI API
+# Function to summarize the URL content using the new OpenAI API (v1.0.0 and above)
 def summarize_content(content, api_key):
     openai.api_key = api_key
-    response = openai.ChatCompletion.create(
+    response = openai.chat_completions.create(
         model="gpt-4",  # Use the appropriate model
         messages=[
             {"role": "system", "content": "You are a helpful assistant."},
@@ -25,14 +25,14 @@ def summarize_content(content, api_key):
     )
     return response.choices[0].message['content'].strip()
 
-# Function to chat with memory (summary + chat history) using the new OpenAI API
+# Function to chat with memory (summary + chat history) using the new OpenAI API (v1.0.0 and above)
 def chat_with_memory(user_input, api_key):
     prompt = "\n".join([msg['content'] for msg in st.session_state['messages']]) + \
              "\nSummary: " + "\n".join(st.session_state['url_summaries']) + \
              "\nUser: " + user_input
              
     openai.api_key = api_key
-    response = openai.ChatCompletion.create(
+    response = openai.chat_completions.create(
         model="gpt-4",  # Use the appropriate model
         messages=[
             {"role": "system", "content": "You are a helpful assistant."},
