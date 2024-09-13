@@ -1,109 +1,67 @@
-import streamlit as st
-import requests
-from bs4 import BeautifulSoup
-import openai
-
-# Function to fetch URL content
-def fetch_url_content(url):
-    try:
-        response = requests.get(url)
-        soup = BeautifulSoup(response.content, 'html.parser')
-        return soup.get_text()
-    except Exception as e:
-        return f"Error fetching content from URL: {e}"
-
-# Function to summarize the URL content using the new OpenAI API (v1.0.0 and above)
-def summarize_content(content, api_key):
-    openai.api_key = api_key
-    response = openai.completions.create(
-        model="gpt-4",  # Use the appropriate model
-        prompt=f"Summarize the following content: {content}",
-        max_tokens=150,
-    )
-    return response.choices[0].text.strip()
-
-# Function to chat with memory (summary + chat history) using the new OpenAI API (v1.0.0 and above)
-def chat_with_memory(user_input, api_key):
-    prompt = "\n".join([msg['content'] for msg in st.session_state['messages']]) + \
-             "\nSummary: " + "\n".join(st.session_state['url_summaries']) + \
-             "\nUser: " + user_input
-             
-    openai.api_key = api_key
-    response = openai.completions.create(
-        model="gpt-4",  # Use the appropriate model
-        prompt=prompt,
-        max_tokens=200,
-    )
-    return response.choices[0].text.strip()
-
-# Streamlit chatbot app
-st.title("💬 Chatbot with URL Summarization")
+# Show title and description.
+st.title("💬 Chatbot")
 st.write(
-    "This chatbot summarizes URLs and chats with memory. Provide an API key and a URL to start."
+    "This is a simple chatbot that uses OpenAI's GPT-4o-mini model to generate responses. "
+    "To use this app, you need to provide an OpenAI API key, which you can get [here](https://platform.openai.com/account/api-keys). "
+    "You can also learn how to build this app step by step by [following our tutorial](https://docs.streamlit.io/develop/tutorials/llms/build-conversational-apps)."
 )
 
-# Ask for OpenAI API key
+# Ask user for their OpenAI API key via st.text_input.
 openai_api_key = st.text_input("OpenAI API Key", type="password")
 if not openai_api_key:
-    st.info("Please provide your OpenAI API key to continue.", icon="🗝️")
+    st.info("Please add your OpenAI API key to continue.", icon="🗝️")
 else:
-    # Sidebar for memory management
+
+    # Sidebar for memory management options.
     memory_option = st.sidebar.radio(
-        "Memory management method:",
+        "Choose how to store memory:",
         ("Last 5 questions", "Summary of entire conversation", "Last 5,000 tokens")
     )
 
-    # URL input field
-    url_input = st.text_input("Enter a URL to summarize:")
+    # Create an OpenAI client.
+    client = OpenAI(api_key=openai_api_key)
 
-    # Initialize session state for messages and summaries
+    # Create a session state variable to store the chat messages.
     if "messages" not in st.session_state:
         st.session_state.messages = []
-    if "url_summaries" not in st.session_state:
-        st.session_state['url_summaries'] = []
 
-    # If a URL is provided
-    if url_input:
-        with st.spinner("Fetching and summarizing URL content..."):
-            url_content = fetch_url_content(url_input)
-            if "Error" in url_content:
-                st.error(url_content)  # Display error if content cannot be fetched
-            else:
-                summary = summarize_content(url_content[:2000], openai_api_key)  # Limit content to avoid token limits
-                st.session_state['url_summaries'].append(summary)
-                st.success("URL summarized successfully!")
-                st.write(summary)
-
-    # Display existing messages
+    # Display the existing chat messages.
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
-    # Chat input field for user messages
-    if prompt := st.chat_input("What's on your mind?"):
-
-        # Store and display the user's message
+    # Chat input field for user messages.
+    if prompt := st.chat_input("What is up?"):
+        
+        # Store and display the current prompt.
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
             st.markdown(prompt)
 
-        # Adjust memory based on user's selection
+        # Adjust memory based on the user's selection.
         if memory_option == "Last 5 questions":
+            # Keep only the last 5 user and assistant messages.
             st.session_state.messages = st.session_state.messages[-10:]
         elif memory_option == "Summary of entire conversation":
+            # Summarize the conversation and keep only the summary.
             conversation_summary = "\n".join(
                 [f"{msg['role']}: {msg['content']}" for msg in st.session_state.messages]
             )
             st.session_state.messages = [{"role": "system", "content": conversation_summary}]
         elif memory_option == "Last 5,000 tokens":
+            # Ensure that the conversation doesn't exceed 5,000 tokens (simplified).
             conversation_text = "\n".join([msg["content"] for msg in st.session_state.messages])
             if len(conversation_text) > 5000:
                 st.session_state.messages = st.session_state.messages[-100:]
 
-        # Generate response using chat_with_memory
-        assistant_message = chat_with_memory(prompt, openai_api_key)
+        # Generate a response using the OpenAI API.
+        stream = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": m["role"], "content": m["content"]} for m in st.session_state.messages],
+            stream=True,
+        )
 
-        # Display assistant's message and append it to session state
+        # Stream the response to the chat.
         with st.chat_message("assistant"):
-            st.markdown(assistant_message)
-        st.session_state.messages.append({"role": "assistant", "content": assistant_message})
+            response = st.write_stream(stream)
+        st.session_state.messages.append({"role": "assistant", "content": response})
