@@ -1,5 +1,7 @@
 import streamlit as st
 from openai import OpenAI
+import requests
+from bs4 import BeautifulSoup
 
 # Show title and description.
 st.title("💬 Chatbot")
@@ -28,13 +30,40 @@ else:
     if "messages" not in st.session_state:
         st.session_state.messages = []
 
+    # URL input from the user.
+    url = st.text_input("Enter the URL to summarize")
+    if url:
+        try:
+            # Retrieve and parse the URL content.
+            response = requests.get(url)
+            soup = BeautifulSoup(response.content, 'html.parser')
+            text = soup.get_text(separator=' ', strip=True)
+
+            # Truncate content to a reasonable length for summarization.
+            text = text[:2000]
+
+            # Add a system message that summarizes the URL.
+            url_summary = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[{"role": "system", "content": f"Summarize the following text: {text}"}],
+                stream=False
+            )
+
+            # Store and display the summary in the chat.
+            st.session_state.messages.append({"role": "system", "content": url_summary['choices'][0]['message']['content']})
+            st.write("Summary of the URL content:")
+            st.markdown(url_summary['choices'][0]['message']['content'])
+
+        except Exception as e:
+            st.error(f"Failed to retrieve or process the URL. Error: {e}")
+
     # Display the existing chat messages.
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
     # Chat input field for user messages.
-    if prompt := st.chat_input("What is up?"):
+    if prompt := st.chat_input("Ask a question"):
         
         # Store and display the current prompt.
         st.session_state.messages.append({"role": "user", "content": prompt})
